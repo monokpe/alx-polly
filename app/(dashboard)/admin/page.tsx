@@ -9,8 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { deletePoll } from "@/app/lib/actions/poll-actions";
-import { createClient } from "@/lib/supabase/client";
+import {
+  deletePoll,
+  getAllPollsForAdmin,
+} from "@/app/lib/actions/poll-actions";
 
 interface Poll {
   id: string;
@@ -26,22 +28,15 @@ export default function AdminPage() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   useEffect(() => {
+    const fetchAllPolls = async () => {
+      const { polls, error } = await getAllPollsForAdmin();
+      if (!error && polls) {
+        setPolls(polls);
+      }
+      setLoading(false);
+    };
     fetchAllPolls();
   }, []);
-
-  const fetchAllPolls = async () => {
-    const supabase = createClient();
-
-    const { data, error } = await supabase
-      .from("polls")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setPolls(data);
-    }
-    setLoading(false);
-  };
 
   const handleDelete = async (pollId: string) => {
     setDeleteLoading(pollId);
