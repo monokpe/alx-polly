@@ -1,3 +1,5 @@
+"use server";
+
 // Simple in-memory rate limiter (for demonstration only)
 const rateLimitMap = new Map<string, { count: number; last: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -23,7 +25,6 @@ function isRateLimited(key: string): boolean {
     return false;
   }
 }
-("use server");
 
 import { createClient } from "@/lib/supabase/server";
 import { LoginFormData, RegisterFormData } from "../types";
@@ -64,7 +65,7 @@ export async function register(data: RegisterFormData) {
     return { error: "Name must be between 2 and 50 characters." };
   }
   // Optionally escape name to prevent injection (basic)
-  const safeName = name.replace(/[<>"'`]/g, "");
+  const safeName = name.replace(/[<>'`]/g, "");
   // Rate limiting by email (for demo; in production use IP or a distributed store)
   if (isRateLimited(data.email)) {
     return { error: "Too many registration attempts. Please try again later." };
@@ -78,7 +79,7 @@ export async function register(data: RegisterFormData) {
   const password = data.password;
   // At least 8 characters, one uppercase, one lowercase, one number, one special character
   const strongPassword =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\\]{};':"\\|,.<>/?]).{8,}$/;
   if (!strongPassword.test(password)) {
     return {
       error:
@@ -123,3 +124,4 @@ export async function getSession() {
   const { data } = await supabase.auth.getSession();
   return data.session;
 }
+
