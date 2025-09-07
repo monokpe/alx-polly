@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Mock data for a single poll
+// Mock data for a single poll. In a real application, this would be fetched from a server.
 const mockPoll = {
   id: '1',
   title: 'Favorite Programming Language',
@@ -22,27 +22,60 @@ const mockPoll = {
   createdBy: 'John Doe',
 };
 
+/**
+ * Renders the detailed view of a single poll.
+ *
+ * @description This is the core interactive page where the primary purpose of the app—voting on polls—takes place.
+ * It provides two distinct views: one for casting a vote and another for displaying the results after a vote has been cast.
+ *
+ * @param {{ params: { id: string } }} { params } - The route parameters, containing the poll's ID.
+ *
+ * @assumptions
+ * - **CURRENTLY USES MOCK DATA.** In a real application, it would fetch live poll data based on `params.id`.
+ * - A user can only vote once. The logic for preventing multiple votes (e.g., checking against a database record)
+ *   is only simulated by the `hasVoted` state and would need a proper backend implementation.
+ *
+ * @edgeCases
+ * - The poll ID is invalid (not currently handled as it uses mock data).
+ * - The voting API call fails. This is simulated with `setTimeout`, but in a real app, this would require robust error handling.
+ *
+ * @returns {JSX.Element} The poll detail page component.
+ */
 export default function PollDetailPage({ params }: { params: { id: string } }) {
+  // State to track the user's selected option before voting.
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  // State to toggle between the voting view and the results view.
   const [hasVoted, setHasVoted] = useState(false);
+  // State to manage the loading indicator on the submit button during the vote submission.
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // In a real app, you would fetch the poll data based on the ID
+  // In a real app, you would fetch the poll data based on the `params.id`.
+  // For now, we are using mock data.
   const poll = mockPoll;
   const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
 
+  /**
+   * Handles the vote submission process.
+   * @description Simulates an API call to submit the user's vote. It sets a loading state during
+   * the submission and then transitions the UI to the results view upon completion.
+   */
   const handleVote = () => {
     if (!selectedOption) return;
     
     setIsSubmitting(true);
     
-    // Simulate API call
+    // Simulate an API call with a timeout.
     setTimeout(() => {
       setHasVoted(true);
       setIsSubmitting(false);
     }, 1000);
   };
 
+  /**
+   * Calculates the percentage of votes for a given option.
+   * @param {number} votes - The number of votes for a specific option.
+   * @returns {number} The percentage of total votes.
+   */
   const getPercentage = (votes: number) => {
     if (totalVotes === 0) return 0;
     return Math.round((votes / totalVotes) * 100);
@@ -55,6 +88,7 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
           &larr; Back to Polls
         </Link>
         <div className="flex space-x-2">
+          {/* These actions would typically be conditional based on user ownership of the poll. */}
           <Button variant="outline" asChild>
             <Link href={`/polls/${params.id}/edit`}>Edit Poll</Link>
           </Button>
@@ -70,6 +104,7 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
           <CardDescription>{poll.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Conditional rendering: show voting options if user hasn't voted, otherwise show results. */}
           {!hasVoted ? (
             <div className="space-y-3">
               {poll.options.map((option) => (
@@ -99,6 +134,7 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
                     <span>{getPercentage(option.votes)}% ({option.votes} votes)</span>
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2.5">
+                    {/* The progress bar representing the vote percentage. */}
                     <div 
                       className="bg-blue-600 h-2.5 rounded-full" 
                       style={{ width: `${getPercentage(option.votes)}%` }}
@@ -118,6 +154,7 @@ export default function PollDetailPage({ params }: { params: { id: string } }) {
         </CardFooter>
       </Card>
 
+      {/* A section for sharing the poll. */}
       <div className="pt-4">
         <h2 className="text-xl font-semibold mb-4">Share this poll</h2>
         <div className="flex space-x-2">
