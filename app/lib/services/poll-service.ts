@@ -123,29 +123,37 @@ export class PollService {
       if (poll.endDate && new Date() > new Date(poll.endDate)) {
         throw new AppError("Voting for this poll has ended.");
       }
-
-      // Check for previous votes if user is authenticated
-      if (userId) {
-        const { data: existingVote, error: voteError } = await supabase
-          .from("votes")
-          .select("id")
-          .eq("pollId", pollId)
-          .eq("userId", userId)
-          .single();
-          
-        if (!voteError && existingVote) {
-          throw new AppError("You have already voted in this poll.");
-        }
+      // Validate optionIndex
+      if (!Number.isFinite(optionIndex) || optionIndex < 0 || optionIndex >= (poll.options?.length ?? 0)) {
+        throw new AppError("Invalid option selected.", 400);
       }
 
-      // Submit vote
-      const { error } = await supabase.from("votes").insert([{
-        pollId,
-        userId,
-        optionId: poll.options[optionIndex].id
-      }]);
+      // Attempt to insert the vote. Rely on DB unique constraint to prevent duplicates.
+      try {
+        const { error } = await supabase.from("votes").insert([{
+          pollId,
+          userId: userId ?? null,
+          optionId: poll.options[optionIndex].id
+        }]);
 
-      if (error) throw new AppError(error.message);
+        if (error) {
+          // Detect unique constraint violation from Postgres/Supabase
+          const code = (error as any)?.code ?? (error as any)?.statusCode ?? (error as any)?.status;
+          const msg = (error && typeof error === 'object' && 'message' in error) ? (error as any).message : JSON.stringify(error);
+          // Common Postgres unique violation SQLSTATE is '23505' and Supabase error may include that
+          if ((error as any)?.code === '23505' || (error as any)?.message?.includes('duplicate key') || (error as any)?.hint?.includes('unique')) {
+            throw new AppError("You have already voted in this poll.", 409);
+          }
+          throw new AppError(`Vote insert failed: ${msg}`);
+        }
+      } catch (dbErr) {
+        // If dbErr is already an AppError, rethrow; else wrap
+        if (dbErr instanceof AppError) throw dbErr;
+        const normalized = handleError(dbErr);
+        const message = normalized && (normalized as any).error ? (normalized as any).error : JSON.stringify(normalized);
+        throw new AppError(message, (normalized as any)?.statusCode || 500);
+      }
+
       return true;
     } catch (error) {
       throw handleError(error);

@@ -22,11 +22,18 @@ export class AuthService {
         email: data.email,
         password: data.password,
       });
-      
-      if (error) throw new AppError(error.message);
+
+      if (error) {
+        const msg = (error && typeof error === 'object' && 'message' in error) ? (error as any).message : JSON.stringify(error);
+        throw new AppError(`Supabase signIn error: ${msg}`);
+      }
       return { success: true };
     } catch (error) {
-      throw handleError(error);
+      // Normalize error via handleError then always throw an Error instance (AppError)
+      const normalized = handleError(error);
+      const message = normalized && (normalized as any).error ? (normalized as any).error : JSON.stringify(normalized);
+      const status = (normalized && (normalized as any).statusCode) || 500;
+      throw new AppError(message, status);
     }
   }
   
@@ -47,11 +54,18 @@ export class AuthService {
         email: data.email,
         password: data.password,
       });
-      
-      if (error) throw new AppError(error.message);
+
+      if (error) {
+        const msg = (error && typeof error === 'object' && 'message' in error) ? (error as any).message : JSON.stringify(error);
+        throw new AppError(`Supabase signUp error: ${msg}`);
+      }
       return { success: true };
     } catch (error) {
-      throw handleError(error);
+      // Normalize then throw an Error instance so callers always get an Error
+      const normalized = handleError(error);
+      const message = normalized && (normalized as any).error ? (normalized as any).error : JSON.stringify(normalized);
+      const status = (normalized && (normalized as any).statusCode) || 500;
+      throw new AppError(message, status);
     }
   }
 }

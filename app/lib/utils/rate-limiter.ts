@@ -2,7 +2,7 @@ import { AUTH } from '../config/constants';
 
 type RateLimitEntry = {
   count: number;
-  last: number;
+  windowStart: number; // timestamp (ms) when the current window started
 };
 
 class RateLimiter {
@@ -15,25 +15,26 @@ class RateLimiter {
   isLimited(key: string): boolean {
     const now = Date.now();
     const entry = this.cache.get(key);
-    
+    // compute the current window start aligned to the configured window length
+    const windowMs = AUTH.RATE_LIMIT.WINDOW;
+    const currentWindowStart = now - (now % windowMs);
+
     if (!entry) {
-      this.cache.set(key, { count: 1, last: now });
+      // initialize with windowStart aligned to current window
+      this.cache.set(key, { count: 1, windowStart: currentWindowStart });
       return false;
     }
-    
-    if (now - entry.last > AUTH.RATE_LIMIT.WINDOW) {
-      this.cache.set(key, { count: 1, last: now });
+
+    // If the stored windowStart is outside the current window, reset
+    if (now - entry.windowStart > windowMs) {
+      this.cache.set(key, { count: 1, windowStart: currentWindowStart });
       return false;
     }
-    
-    if (entry.count >= AUTH.RATE_LIMIT.MAX_ATTEMPTS) {
-      return true;
-    }
-    
+
+    // We're in the same window: increment count and check limit
     entry.count++;
-    entry.last = now;
     this.cache.set(key, entry);
-    return false;
+    return entry.count > AUTH.RATE_LIMIT.MAX_ATTEMPTS;
   }
   
   reset(key: string): void {
