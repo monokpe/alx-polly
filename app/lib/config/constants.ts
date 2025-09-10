@@ -6,6 +6,8 @@ export const AUTH = {
   VALIDATION: {
     PASSWORD_MIN_LENGTH: 8,
     EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    PASSWORD_REGEX:
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/,
   },
 };
 

@@ -7,65 +7,86 @@ import { AUTH } from "../config/constants";
 export class AuthService {
   static async login(data: LoginFormData) {
     try {
+      const normalizedEmail = data.email.trim().toLowerCase();
+
       // Rate limiting check
-      if (rateLimiter.isLimited(data.email)) {
-        throw new AppError("Too many login attempts. Please try again later.", 429);
+      if (rateLimiter.isLimited(normalizedEmail)) {
+        throw new AppError(
+          "Too many login attempts. Please try again later.",
+          429
+        );
       }
-      
+
       // Email validation
-      if (!AUTH.VALIDATION.EMAIL_REGEX.test(data.email)) {
-        throw new AppError("Invalid email format");
+      if (!AUTH.VALIDATION.EMAIL_REGEX.test(normalizedEmail)) {
+        throw new AppError("Invalid email format", 400);
       }
-      
+
       const supabase = await createClient();
       const { error } = await supabase.auth.signInWithPassword({
-        email: data.email,
+        email: normalizedEmail,
         password: data.password,
       });
 
       if (error) {
-        const msg = (error && typeof error === 'object' && 'message' in error) ? (error as any).message : JSON.stringify(error);
-        throw new AppError(`Supabase signIn error: ${msg}`);
+        rateLimiter.increment(normalizedEmail);
+        throw new AppError(error.message, error.status ?? 401);
       }
+
+      rateLimiter.reset(normalizedEmail);
       return { success: true };
     } catch (error) {
-      // Normalize error via handleError then always throw an Error instance (AppError)
-      const normalized = handleError(error);
-      const message = normalized && (normalized as any).error ? (normalized as any).error : JSON.stringify(normalized);
-      const status = (normalized && (normalized as any).statusCode) || 500;
-      throw new AppError(message, status);
+      handleError(error);
     }
   }
-  
+
   static async register(data: RegisterFormData) {
     try {
-      // Email validation
-      if (!AUTH.VALIDATION.EMAIL_REGEX.test(data.email)) {
-        throw new AppError("Invalid email format");
+      const normalizedEmail = data.email.trim().toLowerCase();
+
+      // Rate limiting check
+      if (rateLimiter.isLimited(normalizedEmail)) {
+        throw new AppError(
+          "Too many registration attempts. Please try again later.",
+          429
+        );
       }
-      
+
+      // Email validation
+      if (!AUTH.VALIDATION.EMAIL_REGEX.test(normalizedEmail)) {
+        throw new AppError("Invalid email format", 400);
+      }
+
       // Password validation
       if (data.password.length < AUTH.VALIDATION.PASSWORD_MIN_LENGTH) {
-        throw new AppError(`Password must be at least ${AUTH.VALIDATION.PASSWORD_MIN_LENGTH} characters long`);
+        throw new AppError(
+          `Password must be at least ${AUTH.VALIDATION.PASSWORD_MIN_LENGTH} characters long`,
+          400
+        );
       }
-      
+
+      if (!AUTH.VALIDATION.PASSWORD_REGEX.test(data.password)) {
+        throw new AppError(
+          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+          400
+        );
+      }
+
       const supabase = await createClient();
       const { error } = await supabase.auth.signUp({
-        email: data.email,
+        email: normalizedEmail,
         password: data.password,
       });
 
       if (error) {
-        const msg = (error && typeof error === 'object' && 'message' in error) ? (error as any).message : JSON.stringify(error);
-        throw new AppError(`Supabase signUp error: ${msg}`);
+        rateLimiter.increment(normalizedEmail);
+        throw new AppError(error.message, error.status ?? 401);
       }
+
+      rateLimiter.reset(normalizedEmail);
       return { success: true };
     } catch (error) {
-      // Normalize then throw an Error instance so callers always get an Error
-      const normalized = handleError(error);
-      const message = normalized && (normalized as any).error ? (normalized as any).error : JSON.stringify(normalized);
-      const status = (normalized && (normalized as any).statusCode) || 500;
-      throw new AppError(message, status);
+      handleError(error);
     }
   }
 }

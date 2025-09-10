@@ -29,8 +29,10 @@ export async function createPoll(formData: FormData) {
     await PollService.create({ question, options });
     revalidatePath("/polls");
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { error: message };
   }
 }
 
@@ -39,8 +41,10 @@ export async function getUserPolls() {
   try {
     const polls = await PollService.getUserPolls();
     return { polls, error: null };
-  } catch (error: any) {
-    return { polls: [], error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { polls: [], error: message };
   }
 }
 
@@ -55,8 +59,10 @@ export async function getAllPollsForAdmin() {
 
     const polls = await PollService.getAllForAdmin(user.id);
     return { polls, error: null };
-  } catch (error: any) {
-    return { polls: [], error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { polls: [], error: message };
   }
 }
 
@@ -65,20 +71,22 @@ export async function getPollById(id: string) {
   try {
     const poll = await PollService.getById(id);
     return { poll, error: null };
-  } catch (error: any) {
-    return { poll: null, error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { poll: null, error: message };
   }
 }
 
 // SUBMIT VOTE
 export async function submitVote(pollId: string, optionIndex: number) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    await PollService.submitVote(pollId, optionIndex, user?.id);
+    await PollService.submitVote(pollId, optionIndex);
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { error: message };
   }
 }
 
@@ -88,8 +96,10 @@ export async function deletePoll(id: string) {
     await PollService.delete(id);
     revalidatePath("/polls");
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : String(error ?? "Unknown error");
+    return { error: message };
   }
 }
 

@@ -5,22 +5,27 @@ export class AppError extends Error {
     public code?: string
   ) {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
   }
 }
 
-export const handleError = (error: unknown) => {
+export const handleError = (error: unknown): never => {
+  // If it's already an AppError, return it as is
   if (error instanceof AppError) {
-    return { error: error.message, code: error.code, statusCode: error.statusCode };
+    throw error;
   }
-  
+
+  // If it's a native Error, wrap it in AppError preserving message and code if available
   if (error instanceof Error) {
-    return { error: error.message, statusCode: 500 };
+    const statusCode =
+      (error as any)?.statusCode ?? (error as any)?.code ?? 500;
+    throw new AppError(error.message, statusCode);
   }
-  
-  return { error: 'An unexpected error occurred', statusCode: 500 };
+
+  // For unknown values, create a generic error message
+  throw new AppError("An unexpected error occurred", 500);
 };
 
 export const sanitizeInput = (input: string): string => {
-  return input.replace(/[<>"'`]/g, '').trim();
+  return input.replace(/[<>"'`]/g, "").trim();
 };
