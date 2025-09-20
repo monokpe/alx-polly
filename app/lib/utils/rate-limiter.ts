@@ -24,7 +24,7 @@ class RateLimiter {
     }
 
     // If the stored windowStart is outside the current window, reset
-    if (now - entry.windowStart > windowMs) {
+    if (now - entry.windowStart >= windowMs) {
       this.cache.set(key, { count: 1, windowStart: currentWindowStart });
       return false;
     }
@@ -49,18 +49,6 @@ class RateLimiter {
     });
   }
 
-  reset(key: string): void {
-    this.cache.delete(key);
-  }
-      return false;
-    }
-
-    // We're in the same window: increment count and check limit
-    entry.count++;
-    this.cache.set(key, entry);
-    return entry.count > AUTH.RATE_LIMIT.MAX_ATTEMPTS;
-  }
-  
   reset(key: string): void {
     this.cache.delete(key);
   }
